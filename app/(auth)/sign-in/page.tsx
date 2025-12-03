@@ -1,7 +1,13 @@
+"use client";
+
+import { authClient } from "@/lib/auth-client";
 import Image from "next/image";
 import Link from "next/link";
 
 const page = () => {
+  const handleSignIn = async () => {
+    return await authClient.signIn.social({ provider: "google" });
+  };
   return (
     <main className="sign-in">
       <aside className="testimonial">
@@ -30,7 +36,8 @@ const page = () => {
             </figure>
             <p>
               Screenly makes screen recording easy. From quick walkthroughs to
-              full presentations, it&apos;s fast, smooth, and shareable in seconds
+              full presentations, it&apos;s fast, smooth, and shareable in
+              seconds
             </p>
 
             <article>
@@ -66,7 +73,7 @@ const page = () => {
             Create and share your very first <span>Screenly video</span> in no
             time!
           </p>
-          <button>
+          <button onClick={handleSignIn}>
             <Image
               src="/assets/icons/google.svg"
               alt="google"

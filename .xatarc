@@ -1,0 +1,6 @@
+{
+  "databaseURL": "https://Rahul-Behera-s-workspace-obn7au.us-east-1.xata.sh/db/screenly",
+  "codegen": {
+    "output": "src/xata.ts"
+  }
+}

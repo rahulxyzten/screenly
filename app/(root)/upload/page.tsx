@@ -1,26 +1,58 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import FileInput from "@/components/FileInput";
 import FormField from "@/components/FormField";
 import { useFileInput } from "@/lib/hooks/useFileInput";
 import { MAX_THUMBNAIL_SIZE, MAX_VIDEO_SIZE } from "@/constants";
+import {
+    getThumbnailUploadUrl,
+    getVideoUploadUrl,
+    saveVideoDetails,
+} from "@/lib/actions/video";
+
+
+const uploadFileToBunny = (
+    file: File,
+    uploadUrl: string,
+    accessKey: string
+): Promise<void> =>
+    fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+            "Content-Type": file.type,
+            AccessKey: accessKey,
+        },
+        body: file,
+    }).then((response) => {
+        if (!response.ok)
+            throw new Error(`Upload failed with status ${response.status}`);
+    });
 
 const page = () => {
+    const router = useRouter();
     const [formData, setFormData] = useState({
         title: "",
         description: "",
         visibility: "public",
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [videoDuration, setVideoDuration] = useState(0);
 
     const video = useFileInput(MAX_VIDEO_SIZE);
     const thumbnail = useFileInput(MAX_THUMBNAIL_SIZE);
 
+    useEffect(() => {
+        if (video.duration != null || 0) {
+            setVideoDuration(video.duration);
+        }
+    }, [video.duration]);
+
     const [error, setError] = useState("");
 
-    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
 
         setFormData((prevState) => ({ ...prevState, [name]: value }));
@@ -36,15 +68,49 @@ const page = () => {
                 setError("Please upload video and thumbnail");
                 return;
             }
+            
             if (!formData.title || !formData.description) {
                 setError("Please fill in all the details");
                 return;
             }
 
-            // Upload the video to Bunny
-            // Upload the thumbnail to DB
-            // Attach thumbnail
-            // Create a new DB entry for the video details (urls, data)
+            // Get video upload credentials from Bunny
+            const {
+                videoId,
+                uploadUrl: videoUploadUrl,
+                accessKey: videoAccessKey,
+            } = await getVideoUploadUrl();
+
+            if (!videoUploadUrl || !videoAccessKey) throw new Error("Failed to get video upload credentials");
+
+            // Upload video file to Bunny CDN
+            await uploadFileToBunny(video.file, videoUploadUrl, videoAccessKey);
+
+            // Get thumbnail upload credentials from Bunny
+            const {
+                uploadUrl: thumbnailUploadUrl,
+                accessKey: thumbnailAccessKey,
+                cdnUrl: thumbnailCdnUrl,
+            } = await getThumbnailUploadUrl(videoId);
+
+            if (!thumbnailUploadUrl || !thumbnailAccessKey || !thumbnailCdnUrl) throw new Error("Failed to get thumbnail upload credentials");
+
+            // Upload thumbnail file to Bunny CDN
+            await uploadFileToBunny(
+                thumbnail.file,
+                thumbnailUploadUrl,
+                thumbnailAccessKey
+            );
+
+            // Save video metadata and URLs to database
+            await saveVideoDetails({
+                videoId,
+                thumbnailUrl: thumbnailCdnUrl,
+                ...formData,
+                duration: videoDuration,
+            });
+
+            router.push(`/video/${videoId}`);
         } catch (error) {
             console.log("Error submitting form: ", error);
         } finally {
@@ -86,7 +152,7 @@ const page = () => {
                     file={video.file}
                     previewUrl={video.previewUrl}
                     inputRef={video.inputRef}
-                    OnChange={video.handleFileChange}
+                    onChange={video.handleFileChange}
                     onReset={video.resetFile}
                     type="video"
                 />
@@ -98,7 +164,7 @@ const page = () => {
                     file={thumbnail.file}
                     previewUrl={thumbnail.previewUrl}
                     inputRef={thumbnail.inputRef}
-                    OnChange={thumbnail.handleFileChange}
+                    onChange={thumbnail.handleFileChange}
                     onReset={thumbnail.resetFile}
                     type="image"
                 />

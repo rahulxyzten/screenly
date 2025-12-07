@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, uuid, integer } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
     id: text("id").primaryKey(),
@@ -29,7 +29,7 @@ export const session = pgTable(
             .notNull()
             .references(() => user.id, { onDelete: "cascade" }),
     },
-    (table) => [index("session_userId_idx").on(table.userId)],
+    (table) => [index("session_userId_idx").on(table.userId)]
 );
 
 export const account = pgTable(
@@ -53,7 +53,7 @@ export const account = pgTable(
             .$onUpdate(() => /* @__PURE__ */ new Date())
             .notNull(),
     },
-    (table) => [index("account_userId_idx").on(table.userId)],
+    (table) => [index("account_userId_idx").on(table.userId)]
 );
 
 export const verification = pgTable(
@@ -69,9 +69,29 @@ export const verification = pgTable(
             .$onUpdate(() => /* @__PURE__ */ new Date())
             .notNull(),
     },
-    (table) => [index("verification_identifier_idx").on(table.identifier)],
+    (table) => [index("verification_identifier_idx").on(table.identifier)]
 );
 
+export const videos = pgTable("videos", {
+    id: uuid("id").primaryKey().defaultRandom().unique(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    videoUrl: text("video_url").notNull(),
+    videoId: text("video_id").notNull(),
+    thumbnailUrl: text("thumbnail_url").notNull(),
+    visibility: text("visibility").$type<"public" | "private">().notNull(),
+    userId: text("user_id")
+        .notNull()
+        .references(() => user.id, { onDelete: "cascade" }),
+    views: integer("views").notNull().default(0), 
+    duration: integer("duration"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const schema = {
-    user, account, session, verification
-}
+    user,
+    account,
+    session,
+    verification,
+};

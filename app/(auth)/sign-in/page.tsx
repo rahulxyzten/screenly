@@ -8,6 +8,7 @@ const page = () => {
   const handleSignIn = async () => {
     return await authClient.signIn.social({ provider: "google" });
   };
+  
   return (
     <main className="sign-in">
       <aside className="testimonial">

@@ -26,9 +26,9 @@ const Navbar = () => {
 
         {user && (
           <figure>
-            <button onClick={() => router.push("/profile/123456")}>
+            <button onClick={() => router.push(`/profile/${user?.id}`)}>
               <Image
-                src="/assets/images/dummy.jpg"
+                src={user.image || ""}
                 alt="User"
                 width={36}
                 height={36}

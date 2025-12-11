@@ -4,13 +4,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        hostname: "screenly-app.b-cdn.net",
-        protocol: "https",
-        port: "",
-        pathname: "/**",
-      },
-      {
-        hostname: "lh3.googleusercontent.com",
+        hostname: "*",
         protocol: "https",
         port: "",
         pathname: "/**",

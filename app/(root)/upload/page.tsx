@@ -13,7 +13,6 @@ import {
     saveVideoDetails,
 } from "@/lib/actions/video";
 
-
 const uploadFileToBunny = (
     file: File,
     uploadUrl: string,
@@ -38,6 +37,7 @@ const page = () => {
         description: "",
         visibility: "public",
     });
+    const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [videoDuration, setVideoDuration] = useState(0);
 
@@ -50,9 +50,44 @@ const page = () => {
         }
     }, [video.duration]);
 
-    const [error, setError] = useState("");
+    useEffect(() => {
+        const checkForRecordedVideo = async () => {
+            try {
+                const stored = sessionStorage.getItem("recordedVideo");
+                if (!stored) return;
 
-    const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+                const { url, name, type, duration } = JSON.parse(stored);
+                const blob = await fetch(url).then((res) => res.blob());
+                const file = new File([blob], name, { type, lastModified: Date.now() });
+
+                if (video.inputRef.current) {
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    video.inputRef.current.files = dataTransfer.files;
+
+                    const event = new Event("change", { bubbles: true });
+                    video.inputRef.current.dispatchEvent(event);
+
+                    video.handleFileChange({
+                        target: { files: dataTransfer.files },
+                    } as ChangeEvent<HTMLInputElement>);
+                }
+
+                if (duration) setVideoDuration(duration);
+
+                sessionStorage.removeItem("recordedVideo");
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error("Error loading recorded video:", err);
+            }
+        };
+
+        checkForRecordedVideo();
+    }, [video]);
+
+    const handleInputChange = (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
         const { name, value } = e.target;
 
         setFormData((prevState) => ({ ...prevState, [name]: value }));
@@ -68,7 +103,7 @@ const page = () => {
                 setError("Please upload video and thumbnail");
                 return;
             }
-            
+
             if (!formData.title || !formData.description) {
                 setError("Please fill in all the details");
                 return;
@@ -81,7 +116,8 @@ const page = () => {
                 accessKey: videoAccessKey,
             } = await getVideoUploadUrl();
 
-            if (!videoUploadUrl || !videoAccessKey) throw new Error("Failed to get video upload credentials");
+            if (!videoUploadUrl || !videoAccessKey)
+                throw new Error("Failed to get video upload credentials");
 
             // Upload video file to Bunny CDN
             await uploadFileToBunny(video.file, videoUploadUrl, videoAccessKey);
@@ -93,7 +129,8 @@ const page = () => {
                 cdnUrl: thumbnailCdnUrl,
             } = await getThumbnailUploadUrl(videoId);
 
-            if (!thumbnailUploadUrl || !thumbnailAccessKey || !thumbnailCdnUrl) throw new Error("Failed to get thumbnail upload credentials");
+            if (!thumbnailUploadUrl || !thumbnailAccessKey || !thumbnailCdnUrl)
+                throw new Error("Failed to get thumbnail upload credentials");
 
             // Upload thumbnail file to Bunny CDN
             await uploadFileToBunny(
@@ -110,7 +147,7 @@ const page = () => {
                 duration: videoDuration,
             });
 
-            router.push(`/video/${videoId}`);
+            router.push(`/`);
         } catch (error) {
             console.log("Error submitting form: ", error);
         } finally {

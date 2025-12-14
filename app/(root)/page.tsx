@@ -1,6 +1,5 @@
 import Header from "@/components/Header";
 import VideoCard from "@/components/VideoCard";
-// import { dummyCards } from "@/constants";
 import EmptyState from "@/components/EmptyState";
 import { getAllVideos } from "@/lib/actions/video";
 
